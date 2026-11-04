@@ -1,0 +1,35 @@
+#!/bin/sh
+# Conventional Commits: <type>(<scope>)!: <subject>
+# This file is the single source of truth for allowed types and scopes.
+
+types="feat|fix|refactor|perf|test|docs|style|build|ci|chore|revert"
+# One scope per workspace package; omit the scope for repo-wide changes.
+# Leave empty in a single-package repo: scopes are then not allowed.
+scopes=""
+
+subject=$(head -n1 "$1")
+
+# Messages git generates itself
+case "$subject" in
+  "Merge "*|"Revert "*|"fixup! "*|"squash! "*|"amend! "*) exit 0 ;;
+esac
+
+scope_re=""
+[ -n "$scopes" ] && scope_re="(\(($scopes)\))?"
+
+if ! printf '%s' "$subject" | grep -Eq "^($types)$scope_re!?: [a-z0-9]"; then
+  echo "Invalid commit subject: $subject"
+  echo "Expected: <type>(<scope>)!: <subject>, lowercase subject"
+  echo "Types:  $(echo "$types" | sed 's/|/, /g')"
+  [ -n "$scopes" ] && echo "Scopes: $(echo "$scopes" | sed 's/|/, /g') (or no scope)"
+  exit 1
+fi
+
+case "$subject" in
+  *.) echo "Commit subject must not end with a period"; exit 1 ;;
+esac
+
+if [ ${#subject} -gt 72 ]; then
+  echo "Commit subject is ${#subject} characters, max is 72"
+  exit 1
+fi
